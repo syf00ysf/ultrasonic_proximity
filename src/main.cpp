@@ -1,25 +1,43 @@
 #include <chrono>
 #include <cstdio>
-#include "lidarScanner.h"
+#include "ultrasonicScanner.h"
+#include <fstream>
+#include <iostream>
 
 
 
 int main(){
+    std::ifstream logFile("./Data/readings01.log");
+    if (!logFile.is_open()){
+        std::cerr << "Error: could not open the log file." <<std::endl;
+        return 1;
+    }
+    int greater = 0;
+    int current = 0;
+    while (logFile >> current) {
+        // Process the line (e.g., print it, parse it, filter for errors)
+        if (current > 400) greater++;
+
+    }
+    logFile.close();
+    printf("Greater than 400 is: %d\n", greater);
+
+
     printf("Let's go");
     printf("\n");
 
-
-    LidarScanner a_scanner{ 5 };
+ 
+    UltrasonicScanner a_scanner{ 5 };
 
     auto starting_time = std::chrono::high_resolution_clock::now();
 
     bool state = a_scanner.get_brake_state();
     for(int i = 0; i < 1000000; i++){
-        a_scanner.lidar_reading(3.2f);
+        a_scanner.push_reading(3.2f);
         if (i == 900000){
-            a_scanner.lidar_reading(1.2f);
-            a_scanner.lidar_reading(1.2f);
-            a_scanner.lidar_reading(1.2f);
+            a_scanner.push_reading(1.2f);
+            a_scanner.push_reading(1.2f);
+            a_scanner.push_reading(1.2f);
             state = a_scanner.get_brake_state();
             if(state){
                 printf("Object stopped!\n");

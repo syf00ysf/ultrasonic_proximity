@@ -1,11 +1,11 @@
-# LiDAR Proximity Detection System
-A real-time proximity detection system to simulate LiDAR sensor input using a custom ring buffer and a windowed brake logic in C++ 20.
+# Proximity Detection System
+A real-time proximity detection system to simulate ultrasonic sensor input using a custom ring buffer and a windowed brake logic in C++ 20.
 
 ## Table of contents
 - [Overview](#overview)
 - [Architecture](#architecture)
-- [LidarRingBuffer](#lidarringbuffer-lidarbufferh)
-- [LidarScanner](#lidarscanner-lidarscannerh)
+- [RingBuffer](#ringbuffer-includes)
+- [UltrasonicScanner](#ultrasonicscanner-includes)
 - [Brake logic](#brake-logic)
 - [How to use](#how-to-use)
 - [Sample Output](#sample-output)
@@ -20,19 +20,19 @@ My first implementation of this would trigger a brake on a single unsafe reading
 
 ## Architecture
 
-```
+``` 
 .
 ├── Makefile
 ├── README.md
 ├── include
-│   ├── lidarBuffer.h
-│   └── lidarScanner.h
+│   ├── ultrasonicBuffer.h
+│   └── ultrasonicScanner.h
 └── src
     └── main.cpp
 
 ```
 
-## LidarRingBuffer (lidarBuffer.h)
+## RingBuffer (ultrasonicBuffer.h)
 A fixed-capacity ring buffer with full Rule of Five:
 - Copy constructor and copy assignment
 - Move constructor and move assignment
@@ -41,7 +41,7 @@ A fixed-capacity ring buffer with full Rule of Five:
 Supports `push_to_ring()` (lvalue and rvalue overloads), `pop_from_ring()` returning `std::optional<T>`, and `get_recent_readings()` to get last n readings.
 
 
-## LidarScanner (lidarScanner.h)
+## UltrasonicScanner (ultrasonicScanner.h)
 Wraps the ring buffer and implements windowed brake detection:
 - `push_to_ring()` pushes each new distance reading into the buffer
 - It inspects the last 5 readings
@@ -101,7 +101,7 @@ Benchmarked with `std::chrono::high_resolution_clock` over 1,000,000+ iterations
 
 - Configurable window size and threshold at runtime
 - ROS2 node wrapper for integration with real sensor hardware
-- Multi-sensor fusion across multiple `LidarScanner` instances
+- Multi-sensor fusion across multiple `UltrasonicScanner` instances
 - Unit test suite with edge case coverage
 
 ---

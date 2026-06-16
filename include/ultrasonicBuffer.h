@@ -1,13 +1,14 @@
-#ifndef LIDARBUFFER_H
-#define LIDARBUFFER_H
-
+#ifndef ULTRASONICBUFFER_H
+#define ULTRASONICBUFFER_H
+ 
 #include <cstddef>
 #include <optional>
 #include <vector>
 
+ 
 template <typename T>
 
-class LidarRingBuffer{
+class RingBuffer{
     private:
     size_t max_size;
     size_t head;
@@ -17,19 +18,19 @@ class LidarRingBuffer{
 
     public:
     //constructor
-    LidarRingBuffer(const size_t max_size): max_size { max_size }{
+    RingBuffer(const size_t max_size): max_size { max_size }{
         head = 0;
         tail = 0;
         count = 0;
         buffer = new T[max_size];
     }
     //Destructor
-    ~LidarRingBuffer(){
+    ~RingBuffer(){
         delete [] buffer;
     }
 
     //copy constructors
-    LidarRingBuffer(const LidarRingBuffer& other)
+    RingBuffer(const RingBuffer& other)
         :max_size { other.max_size },
          head { other.head },
          tail { other.tail },
@@ -41,7 +42,7 @@ class LidarRingBuffer{
         
     }
 
-    LidarRingBuffer& operator=(const LidarRingBuffer& other){
+    RingBuffer& operator=(const RingBuffer& other){
         if (this == &other) return *this;
         delete [] buffer;
         max_size = other.max_size;
@@ -55,7 +56,7 @@ class LidarRingBuffer{
         return *this;
     }
     //move constructors
-    LidarRingBuffer(LidarRingBuffer&& other)noexcept
+    RingBuffer(RingBuffer&& other)noexcept
         :max_size { other.max_size },
          head {other.head },
          tail { other.tail },
@@ -67,7 +68,7 @@ class LidarRingBuffer{
         other.count = 0;
         other.buffer = nullptr;
     }
-    LidarRingBuffer& operator=(LidarRingBuffer&& other)noexcept{
+    RingBuffer& operator=(RingBuffer&& other)noexcept{
         if (this == &other) return *this;
         delete [] buffer;
         max_size = other.max_size;
