@@ -6,3 +6,4 @@ scanner: src/main.cpp
 
 clean:
 	rm -f scanner
+ 

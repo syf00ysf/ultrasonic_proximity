@@ -1,21 +1,21 @@
-#ifndef LIDARSCANNER_H
-#define LIDARSCANNER_H
+#ifndef ULTRASONICSCANNER_H
+#define ULTRASONICSCANNER_H
 
-#include "lidarBuffer.h"
-
-class LidarScanner {
+#include "ultrasonicBuffer.h"
+ 
+class UltrasonicScanner {
     private:
-    LidarRingBuffer <float> a_lidar_ring;
+    RingBuffer <float> a_ring;
     float max_safe_distance = 2.5f;
     bool brake_object;
-
+ 
     public:
-    LidarScanner(size_t max_size) : a_lidar_ring { max_size }, brake_object { false }{
+    UltrasonicScanner(size_t max_size) : a_ring { max_size }, brake_object { false }{
     }
 
-    void lidar_reading(float new_distance){
-        a_lidar_ring.push_to_ring(new_distance);
-        auto recent_readings = a_lidar_ring.get_recent_readings(5);
+    void push_reading(float new_distance){
+        a_ring.push_to_ring(new_distance);
+        auto recent_readings = a_ring.get_recent_readings(5);
         int tally = 0;
         for(size_t i = 0; i < recent_readings.size(); i++){
             if (recent_readings[i] < max_safe_distance){
