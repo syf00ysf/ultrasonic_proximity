@@ -4,8 +4,9 @@ A real-time proximity detection system to simulate ultrasonic sensor input using
 ## Table of contents
 - [Overview](#overview)
 - [Architecture](#architecture)
-- [RingBuffer](#ringbuffer-includes)
-- [UltrasonicScanner](#ultrasonicscanner-includes)
+- [RingBuffer](#ringbuffer)
+- [UltrasonicScanner](#ultrasonicscanner)
+- [UltrasonicCharacterizer](#ultrasoniccharacterizer)
 - [Brake logic](#brake-logic)
 - [How to use](#how-to-use)
 - [Sample Output](#sample-output)
@@ -24,15 +25,20 @@ My first implementation of this would trigger a brake on a single unsafe reading
 .
 ├── Makefile
 ├── README.md
+├── Data
+│   ├── readings01.log
+│   ├── readings02_moving.log
+│   └── readings03_static50.log
 ├── include
 │   ├── ultrasonicBuffer.h
-│   └── ultrasonicScanner.h
+│   ├── ultrasonicScanner.h
+│   └── ultrasonicCharacterizer.h
 └── src
     └── main.cpp
 
 ```
 
-## RingBuffer (ultrasonicBuffer.h)
+## RingBuffer
 A fixed-capacity ring buffer with full Rule of Five:
 - Copy constructor and copy assignment
 - Move constructor and move assignment
@@ -41,7 +47,7 @@ A fixed-capacity ring buffer with full Rule of Five:
 Supports `push_to_ring()` (lvalue and rvalue overloads), `pop_from_ring()` returning `std::optional<T>`, and `get_recent_readings()` to get last n readings.
 
 
-## UltrasonicScanner (ultrasonicScanner.h)
+## UltrasonicScanner
 Wraps the ring buffer and implements windowed brake detection:
 - `push_to_ring()` pushes each new distance reading into the buffer
 - It inspects the last 5 readings
@@ -49,6 +55,44 @@ Wraps the ring buffer and implements windowed brake detection:
 - Brake state resets automatically when readings return to safe range
 
 ---
+
+## UltrasonicCharacterizer
+
+This is a summary of the characterization of different readings:
+- ***readings01*** is an old legacy capture without timestamps and uncontrolled measurement.
+- ***readings02_moving*** with a moving target.
+- ***readings03_static50*** with a static wall at 50 cm reference.
+
+
+| Stat                | readings01 | readings02_moving | readings03_static50 |
+|---------------------|-----------:|------------------:|-------------------:|
+| jitter_std (ms)     |     n/a    | 0.96              | 0.63               |
+| delta_std (cm)      |     -      | 4.29              | 0.57               |
+| corrupted (%)       |     2.4    | 0                 | 0                  |
+| max_low_run(<10)    |     37     | 9                 | 0                  |
+| max_spike_run (>= 798)|   3      | 0                 | 0                  |
+| mean reading (cm)   |      -     | 28.76             | 49.33              |
+| reading_std (cm)    |       -    | 14.22             | 0.47               |
+
+1.  `noise floor <=1cm in readings03_static50 (measured 0.47)`
+
+    In the ***readings03_static50*** test, the reading only varied about 0.47 cm which is less than 1 cm. The sensor can't really express tiny sub-centimeter changes, so the noise is basically limited by measurement resolution.
+
+2. `bias -0.67 cm`
+
+    Measured mean in the ***readings03_static50*** test shows that the sensor reads slightly short about: `49.33 - 50.00 = -0.67 cm` smaller than the sensor's 1 cm resolution.
+
+3. `Jitter < 1ms validating constant-dt`
+
+    Both ***readings03_static50*** and ***readings02_moving*** timestamps are spaced very consistently. Jitter standard deviation is under 1 ms so later filters can safely assume constant time steps.
+
+4. `The filter parameter`, Kalman measurement noise variance is standard deviation squared:
+
+    `reading_std²(static) ≈ 0.25 cm²`
+ 
+
+
+
 ## Brake Logic
 
 ```cpp
