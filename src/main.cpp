@@ -1,33 +1,26 @@
 #include <chrono>
 #include <cstdio>
 #include "ultrasonicScanner.h"
-#include <fstream>
+#include "ultrasonicCharacterizer.h"
 #include <iostream>
 
 
-
 int main(){
-    std::ifstream logFile("./Data/readings01.log");
-    if (!logFile.is_open()){
-        std::cerr << "Error: could not open the log file." <<std::endl;
-        return 1;
-    }
-    int greater = 0;
-    int current = 0;
-    while (logFile >> current) {
-        // Process the line (e.g., print it, parse it, filter for errors)
-        if (current > 400) greater++;
-
-    }
-    logFile.close();
-    printf("Greater than 400 is: %d\n", greater);
-
-
     printf("Let's go");
     printf("\n");
 
  
     UltrasonicScanner a_scanner{ 5 };
+    UltrasonicCharacterizer sonicCharacterizer;
+    CharacterizationStats stats = sonicCharacterizer.analyze_file("./Data/readings02_moving.log");
+    
+    printf("Jitter_std is = %.2f\n", stats.jitter_std);
+    printf("Delta std = %.2f\n", stats.delta_std);
+    printf("Corrupted = %.2f\n", stats.corrupted_percentage);
+    printf("Max low run = %d\n", stats.max_low_run);
+    printf("Max spike run = %d\n", stats.max_spike_run);
+    printf("Reading mean = %.2f\n", stats.reading_mean);
+    printf("Reading std = %.2f\n", stats.reading_std);
 
     auto starting_time = std::chrono::high_resolution_clock::now();
 
