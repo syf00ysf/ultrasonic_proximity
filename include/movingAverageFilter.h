@@ -5,7 +5,7 @@
 #include <vector>
 
 template <typename T>
-class MovingAverageFilter{
+class MovingAverageFilter{ 
     private:
     std::vector<T> readings;
     std::size_t window_size;

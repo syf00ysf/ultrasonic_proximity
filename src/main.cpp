@@ -2,6 +2,7 @@
 #include <cstdio>
 #include "ultrasonicScanner.h"
 #include "ultrasonicCharacterizer.h"
+#include "logFilter.h"
 #include <iostream>
 
 
@@ -21,6 +22,14 @@ int main(){
     printf("Max spike run = %d\n", stats.max_spike_run);
     printf("Reading mean = %.2f\n", stats.reading_mean);
     printf("Reading std = %.2f\n", stats.reading_std);
+
+    // New file from filter
+
+    filter_log(
+        "./Data/readings02_moving.log",
+        "./Data/readings02_moving_filtered.log",
+        5
+    );
 
     auto starting_time = std::chrono::high_resolution_clock::now();
 
