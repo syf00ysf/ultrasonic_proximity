@@ -1,5 +1,5 @@
 # Proximity Detection System
-A real-time proximity detection system to simulate ultrasonic sensor input using a custom ring buffer and a windowed brake logic in C++ 20.
+A real-time proximity detection system that processes and characterizes ultrasonic sensor data using a custom ring buffer, sensor noise analysis, and windowed brake logic in C++20.
 
 ## Table of contents
 - [Overview](#overview)
