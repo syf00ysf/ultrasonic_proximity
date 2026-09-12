@@ -26,8 +26,8 @@ int main(){
     // New file from filter
 
     filter_log(
-        "./Data/readings02_moving.log",
-        "./Data/readings02_moving_filtered.log",
+        "./Data/readings03_static50.log",
+        "./Data/readings03_static50_filtered.log",
         5
     );
 

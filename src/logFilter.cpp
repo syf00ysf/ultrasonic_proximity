@@ -2,7 +2,6 @@
 #include "movingAverageFilter.h"
 
 #include <fstream>
-#include <stdexcept>
 #include <iostream>
 
 void filter_log(
@@ -26,13 +25,10 @@ void filter_log(
     float timestamp;
     float reading;
 
-    output << "Timestamp raw_distance filtered_distance\n";
-
     while(input >> timestamp >> reading){
         float filtered_distance = filter.update(reading);
 
         output << timestamp << ' '
-               << reading   << ' '
                << filtered_distance <<'\n';
     }
 }
