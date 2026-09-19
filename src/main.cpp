@@ -26,9 +26,9 @@ int main(){
     // New file from filter
 
     filter_log(
-        "./Data/readings03_static50.log",
-        "./Data/readings03_static50_filtered.log",
-        5
+        "./Data/readings02_moving.log",
+        "./Data/readings02_moving_filtered_w10.log",
+        10
     );
 
     auto starting_time = std::chrono::high_resolution_clock::now();
