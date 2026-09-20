@@ -1,1 +1,7 @@
 scanner
+/test_moving_average
+/test_ring_buffer
+# Existing compiled executable accidentally named with a source extension.
+/test_ring_buffer.cpp
+.DS_Store
+__pycache__/
