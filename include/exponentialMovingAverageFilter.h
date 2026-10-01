@@ -1,8 +1,6 @@
 #pragma once
 
-#include <cstddef>
 #include <stdexcept>
-#include <vector>
 
 template <typename T>
 
@@ -16,7 +14,7 @@ class ExponentialMovingAverageFilter{
     explicit ExponentialMovingAverageFilter(float alpha): alpha {alpha}{
         if(alpha <= 0 || alpha > 1){
             throw std::invalid_argument(
-                "Alpha must be greater than zero or less than one."
+                "Alpha must be greater than zero and less or equal to one."
             );
         }
     }

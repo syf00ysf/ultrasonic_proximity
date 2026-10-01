@@ -2,6 +2,8 @@
 #include <cstdio>
 #include "ultrasonicScanner.h"
 #include "ultrasonicCharacterizer.h"
+#include "movingAverageFilter.h"
+#include "exponentialMovingAverageFilter.h"
 #include "logFilter.h"
 #include <iostream>
 
@@ -24,11 +26,18 @@ int main(){
     printf("Reading std = %.2f\n", stats.reading_std);
 
     // New file from filter
+    MovingAverageFilter<float> moving_average{10};
+    ExponentialMovingAverageFilter<float> ema{0.5f};
 
     filter_log(
         "./Data/readings02_moving.log",
         "./Data/readings02_moving_filtered_w10.log",
-        10
+        moving_average
+    );
+    filter_log(
+        "./Data/readings02_moving.log",
+        "./Data/readings02_ema_filtered_0_5.log",
+        ema
     );
 
     auto starting_time = std::chrono::high_resolution_clock::now();
