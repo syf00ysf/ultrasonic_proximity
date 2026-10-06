@@ -85,19 +85,21 @@ def compare_log(raw_path, filtered_logs, title, out_path, ref_line=None,
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--moving", nargs=5, default=[
+    ap.add_argument("--moving", nargs=6, default=[
         "Data/readings02_moving.log",
         "Data/readings02_moving_filtered_w3.log",
         "Data/readings02_moving_filtered_w5.log",
         "Data/readings02_moving_filtered_w10.log",
         "Data/readings02_moving_ema_filtered_0_5.log",
+        "Data/readings02_moving_median_filtered_w5.log",
     ])
-    ap.add_argument("--static", nargs=5, default=[
+    ap.add_argument("--static", nargs=6, default=[
         "Data/readings03_static50.log",
         "Data/readings03_static50_filtered_w3.log",
         "Data/readings03_static50_filtered_w5.log",
         "Data/readings03_static50_filtered_w10.log",
         "Data/readings03_static50_ema_filtered_0_5.log",
+        "Data/readings03_static50_median_filtered_w5.log",
     ])
     ap.add_argument("--outdir", default="Data")
     ap.add_argument("--seconds", type=float, default=60,
@@ -107,14 +109,15 @@ def main():
         ap.error("--seconds must be zero or positive")
 
     for paths, title, filename, reference in [
-        (args.moving, "Moving target: moving average and EMA", "compare_moving.png", None),
-        (args.static, "Static wall at 50 cm: moving average and EMA", "compare_static50.png", 50),
+        (args.moving, "Moving target: moving average, EMA and MEDIAN", "compare_moving.png", None),
+        (args.static, "Static wall at 50 cm: moving average, EMA and MEDIAN", "compare_static50.png", 50),
     ]:
         filtered_logs = [
             (paths[1], "MA window 3", "tab:blue"),
             (paths[2], "MA window 5", "tab:orange"),
             (paths[3], "MA window 10", "tab:green"),
             (paths[4], "EMA α=0.5", "tab:purple"),
+            (paths[5], "Median window 5", "tab:brown"),
         ]
         compare_log(paths[0], filtered_logs, title, Path(args.outdir) / filename,
                     ref_line=reference, seconds=args.seconds)

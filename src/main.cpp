@@ -4,6 +4,7 @@
 #include "ultrasonicCharacterizer.h"
 #include "movingAverageFilter.h"
 #include "exponentialMovingAverageFilter.h"
+#include "medianFilter.h"
 #include "logFilter.h"
 #include <iostream>
 
@@ -28,6 +29,7 @@ int main(){
     // New file from filter
     MovingAverageFilter<float> moving_average{10};
     ExponentialMovingAverageFilter<float> ema{0.5f};
+    MedianFilter<float> median_filter{5};
 
     filter_log(
         "./Data/readings02_moving.log",
@@ -44,6 +46,17 @@ int main(){
         "./Data/readings03_static50.log",
         "./Data/readings03_static50_ema_filtered_0_5.log",
         ema
+    );
+    filter_log(
+        "./Data/readings02_moving.log",
+        "./Data/readings02_moving_median_filtered_w5.log",
+        median_filter
+    );
+    median_filter.reset();
+    filter_log(
+        "./Data/readings03_static50.log",
+        "./Data/readings03_static50_median_filtered_w5.log",
+        median_filter
     );
 
     auto starting_time = std::chrono::high_resolution_clock::now();
