@@ -36,7 +36,13 @@ int main(){
     );
     filter_log(
         "./Data/readings02_moving.log",
-        "./Data/readings02_ema_filtered_0_5.log",
+        "./Data/readings02_moving_ema_filtered_0_5.log",
+        ema
+    );
+    ema.reset();
+    filter_log(
+        "./Data/readings03_static50.log",
+        "./Data/readings03_static50_ema_filtered_0_5.log",
         ema
     );
 
