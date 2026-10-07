@@ -59,6 +59,27 @@ int main(){
         median_filter
     );
 
+    // synthetic data process
+    moving_average.reset();
+    ema.reset();
+    median_filter.reset();
+
+    filter_log(
+        "./Data/synthetic_spike_step_100.log",
+        "./Data/synthetic_spike_step_100_median_filtered_w5.log",
+        median_filter
+    );
+    filter_log(
+        "./Data/synthetic_spike_step_100.log",
+         "./Data/synthetic_spike_step_100_moving_average_w10.log",
+         moving_average
+    );
+    filter_log(
+        "./Data/synthetic_spike_step_100.log",
+        "./Data/synthetic_spike_step_100_ema_0_5.log",
+        ema
+    );
+
     auto starting_time = std::chrono::high_resolution_clock::now();
 
     bool state = a_scanner.get_brake_state();
