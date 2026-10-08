@@ -6,6 +6,7 @@
 #include "exponentialMovingAverageFilter.h"
 #include "medianFilter.h"
 #include "logFilter.h"
+#include "logReader.h"
 #include <iostream>
 
 
@@ -14,7 +15,7 @@ int main(){
     printf("\n");
 
  
-    UltrasonicScanner a_scanner{ 5 };
+    UltrasonicScanner a_scanner{ 5, 25.0f };
     UltrasonicCharacterizer sonicCharacterizer;
     CharacterizationStats stats = sonicCharacterizer.analyze_file("./Data/readings02_moving.log");
     
@@ -80,15 +81,25 @@ int main(){
         ema
     );
 
+    //Test scanner
+
+    UltrasonicScanner b_scanner{ 5, 25.0f };
+    log_reader(
+        "./Data/synthetic_spike_step_100_median_filtered_w5.log",
+        "./Data/synthetic_scanner_decision_median_filtered_w5.log",
+        b_scanner
+    );
+
+
     auto starting_time = std::chrono::high_resolution_clock::now();
 
     bool state = a_scanner.get_brake_state();
     for(int i = 0; i < 1000000; i++){
-        a_scanner.push_reading(3.2f);
+        a_scanner.push_reading(50.0f);
         if (i == 900000){
-            a_scanner.push_reading(1.2f);
-            a_scanner.push_reading(1.2f);
-            a_scanner.push_reading(1.2f);
+            a_scanner.push_reading(24.7f);
+            a_scanner.push_reading(23.0f);
+            a_scanner.push_reading(20.5f);
             state = a_scanner.get_brake_state();
             if(state){
                 printf("Object stopped!\n");

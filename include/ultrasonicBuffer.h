@@ -1,6 +1,6 @@
 #ifndef ULTRASONICBUFFER_H
 #define ULTRASONICBUFFER_H
- 
+
 #include <cstddef>
 #include <optional>
 #include <vector>

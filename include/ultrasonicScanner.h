@@ -2,15 +2,25 @@
 #define ULTRASONICSCANNER_H
 
 #include "ultrasonicBuffer.h"
+#include "stdexcept"
  
 class UltrasonicScanner {
     private:
     RingBuffer <float> a_ring;
-    float max_safe_distance = 2.5f;
+    float threshold_cm;
     bool brake_object;
  
     public:
-    UltrasonicScanner(size_t max_size) : a_ring { max_size }, brake_object { false }{
+    UltrasonicScanner(std::size_t capacity, float threshold_cm) 
+        : a_ring { capacity }, 
+          threshold_cm { threshold_cm},
+        brake_object { false }
+    {
+        if (threshold_cm <= 0 ){
+            throw std::invalid_argument(
+                "Threshold must be greater than 0"
+            );
+        }
     }
 
     void push_reading(float new_distance){
@@ -18,7 +28,7 @@ class UltrasonicScanner {
         auto recent_readings = a_ring.get_recent_readings(5);
         int tally = 0;
         for(size_t i = 0; i < recent_readings.size(); i++){
-            if (recent_readings[i] < max_safe_distance){
+            if (recent_readings[i] < threshold_cm){
                 tally++;
             }
         }
