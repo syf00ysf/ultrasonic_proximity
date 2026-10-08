@@ -1,154 +1,124 @@
-# Proximity Detection System
-A real-time proximity detection system that processes and characterizes ultrasonic sensor data using a custom ring buffer, sensor noise analysis, and windowed brake logic in C++20.
+# Ultrasonic Proximity Pipeline
 
-## Table of contents
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [RingBuffer](#ringbuffer)
-- [UltrasonicScanner](#ultrasonicscanner)
-- [UltrasonicCharacterizer](#ultrasoniccharacterizer)
-- [Brake logic](#brake-logic)
-- [How to use](#how-to-use)
-- [Sample Output](#sample-output)
-- [Performance](#performance)
-- [Design Decision](#design-decision)
-- [Future Work](#future-work)
-- [Author](#author)
+A C++20 learning project that processes saved ultrasonic sensor measurements, compares three filters, and replays filtered distances through a configurable proximity decision. Python generates plots for real recordings and a controlled synthetic experiment.
 
-## Overview
-This project models a core problem in perception systems: ***how to make reliable decisions from noisy, high-frequency sensor data?***
-My first implementation of this would trigger a brake on a single unsafe reading, which would cause false readings from sensor noise. Instead this system uses a **sliding window to get last n readings** and only triggers a brake when a majority breach the safety threshold. 
+**Current milestone:** offline log-to-decision processing. Live serial processing and physical motor/brake control are not implemented. The printed brake state is a software decision, not a physical action.
 
-## Architecture
-
-``` 
-.
-├── Makefile
-├── README.md
-├── Data
-│   ├── readings01.log
-│   ├── readings02_moving.log
-│   └── readings03_static50.log
-├── include
-│   ├── ultrasonicBuffer.h
-│   ├── ultrasonicScanner.h
-│   └── ultrasonicCharacterizer.h
-└── src
-    └── main.cpp
-
+```text
+Raw timestamped log → MA / EMA / median → Filtered log
+                                             ↓
+                                  Three-of-five scanner
+                                             ↓
+                              Timestamped decision log
 ```
 
-## RingBuffer
-A fixed-capacity ring buffer with full Rule of Five:
-- Copy constructor and copy assignment
-- Move constructor and move assignment
-- Destructor with manual heap cleanup
+## What is implemented
 
-Supports `push_to_ring()` (lvalue and rvalue overloads), `pop_from_ring()` returning `std::optional<T>`, and `get_recent_readings()` to get last n readings.
+- A templated ring buffer with copy/move operations and recent-reading retrieval.
+- Moving average (MA), exponential moving average (EMA), and median filters with `update()` and `reset()`.
+- A templated `filter_log()` that accepts a filter object by reference.
+- A scanner with a constructor-configured threshold in centimeters. With capacity 5, it asserts the brake state when at least three of the latest five readings are strictly below the threshold; equality does not count. It can assert before the window is full once three close readings arrive.
+- A log reader that feeds filtered readings to the scanner and saves its decisions.
+- Four assertion-based test programs covering selected filter and ring-buffer behavior.
+- Plots comparing filters on stationary, moving, and synthetic recordings.
 
+## Inputs and units
 
-## UltrasonicScanner
-Wraps the ring buffer and implements windowed brake detection:
-- `push_to_ring()` pushes each new distance reading into the buffer
-- It inspects the last 5 readings
-- It sets brake state if **3 or more** readings are below `max_safe_distance` (2.5m)
-- Brake state resets automatically when readings return to safe range
+Two-column logs contain `timestamp_ms distance_cm`, with no header. Distances are centimeters; plots convert milliseconds to seconds. Hardware recordings have approximately 1,030 ms between readings. The legacy `readings01.log` contains single-column readings and is not compatible with every reader.
 
----
+The stationary recording used a 50 cm reference placement. The moving recording has no independent time-varying ground truth, so following its raw signal is not proof of physical accuracy.
 
-## UltrasonicCharacterizer
+Files prefixed `synthetic_` are invented experiments, not sensor captures. See [the experiment description](Data/synthetic_spike_step_100.md).
 
-This is a summary of the characterization of different readings:
-- ***readings01*** is an old legacy capture without timestamps and uncontrolled measurement.
-- ***readings02_moving*** with a moving target.
-- ***readings03_static50*** with a static wall at 50 cm reference.
+## Results
 
+### Stationary variation
 
-| Stat                | readings01 | readings02_moving | readings03_static50 |
-|---------------------|-----------:|------------------:|-------------------:|
-| jitter_std (ms)     |     n/a    | 0.96              | 0.63               |
-| delta_std (cm)      |     -      | 4.29              | 0.57               |
-| corrupted (%)       |     2.4    | 0                 | 0                  |
-| max_low_run(<10)    |     37     | 9                 | 0                  |
-| max_spike_run (>= 798)|   3      | 0                 | 0                  |
-| mean reading (cm)   |      -     | 28.76             | 49.33              |
-| reading_std (cm)    |       -    | 14.22             | 0.47               |
+| Method | Standard deviation |
+|---|---:|
+| Raw | 0.47 cm |
+| MA window 3 | 0.33 cm |
+| MA window 5 | 0.29 cm |
+| MA window 10 | 0.24 cm |
+| EMA alpha 0.5 | 0.32 cm |
+| Median window 5 | 0.45 cm |
 
-1.  `noise floor <=1cm in readings03_static50 (measured 0.47)`
+These values use the whole stationary recording. Lower variation does not establish lower bias or better response time. The raw mean is about 49.33 cm against the 50 cm reference.
 
-    In the ***readings03_static50*** test, the reading only varied about 0.47 cm which is less than 1 cm. The sensor can't really express tiny sub-centimeter changes, so the noise is basically limited by measurement resolution.
+### Synthetic spike and sustained change
 
-2. `bias -0.67 cm`
+The experiment has 100 readings, one second apart. True distance starts at 50 cm; an erroneous 150 cm reading appears at 20 seconds. True distance changes to 20 cm at 50 seconds and stays there.
 
-    Measured mean in the ***readings03_static50*** test shows that the sensor reads slightly short about: `49.33 - 50.00 = -0.67 cm` smaller than the sensor's 1 cm resolution.
+| Method | Output at isolated spike (truth: 50 cm) | Delay to within 1 cm of 20 cm after the step |
+|---|---:|---:|
+| MA window 10 | 60 cm | 9 s |
+| EMA alpha 0.5 | 100 cm | 4 s |
+| Median window 5 | 50 cm | 2 s |
 
-3. `Jitter < 1ms validating constant-dt`
+Delay is measured from the first changed input; a response on that same reading would have zero delay. These results apply to this sequence and these settings, not all sensor conditions.
 
-    Both ***readings03_static50*** and ***readings02_moving*** timestamps are spaced very consistently. Jitter standard deviation is under 1 ms so later filters can safely assume constant time steps.
+When the median output is replayed through the scanner with a 25 cm threshold and capacity 5, the first brake assertion is at **54,000 ms**: 2 seconds of median response delay plus 2 seconds to collect three close readings. The saved decision log has 100 rows in this format:
 
-4. `The filter parameter`, Kalman measurement noise variance is standard deviation squared:
-
-    `reading_std²(static) ≈ 0.25 cm²`
- 
-
-
-
-## Brake Logic
-
-```cpp
-// Triggers brake if 3 of the last 5 readings breach threshold
-brake_object = (tally >= 3);
+```text
+timestamp_ms filtered_distance_cm brake_state
 ```
 
-This windowed majority approach prevents single noisy readings from triggering a false brake, while still responding quickly to a genuine obstacle.
+The actual file has no header; brake state is `0` or `1`.
 
+![Synthetic filter comparison](Data/compare_synthetic.png)
 
-## How to use
+[Moving comparison](Data/compare_moving.png) · [Stationary comparison](Data/compare_static50.png)
 
-***Require g++ with C++20 support***
+## Build and run
+
+Requirements: a C++20 compiler and Make. Plotting additionally requires Python 3, NumPy, and Matplotlib.
+
+Run from the repository root:
 
 ```bash
-# Build
 make
-
-# Run 
 ./scanner
+python3 plot_compare.py
 ```
 
-## Sample Output
+`scanner` regenerates the outputs configured in `src/main.cpp`, including the synthetic median decision log, and then runs a separate hard-coded scanner benchmark. MA outputs for other window sizes are included as saved artifacts; the current main program does not regenerate every historical MA result. Output files are overwritten when regenerated.
 
+The plotting script writes three images: `compare_moving.png`, `compare_static50.png`, and `compare_synthetic.png`. To show the full real recordings, use `python3 plot_compare.py --seconds 0`. Synthetic plots always show the full experiment plus two event details.
+
+## Run tests
+
+The tests use `assert`; do not compile them with `NDEBUG` enabled. This command builds each test into a temporary directory and runs it:
+
+```bash
+test_dir=$(mktemp -d)
+for source in tests/*.cpp; do
+    binary="$test_dir/$(basename "$source" .cpp)"
+    c++ -std=c++20 -Wall -Wextra -Iinclude "$source" -o "$binary" && "$binary" || break
+done
 ```
-Let's go
-Object stopped!         ← 3 unsafe readings at i=900000, brake triggers
-Object still running!   ← 99,999 safe readings follow, brake resets
-It took : 43.21ms       ← 1,000,000+ iterations processed
-```
 
-## Performance
+Successful tests are silent. Current cases cover basic ring-buffer empty/overwrite/order behavior, MA startup/window/reset, EMA updates/reset/alpha boundaries, and median odd/even windows/spike/reset/zero capacity. They are not exhaustive; scanner integration has also been checked against the saved decision rows.
 
-Benchmarked with `std::chrono::high_resolution_clock` over 1,000,000+ iterations. The ring buffer operates in **O(1)** for push and window retrieval.
+## Code map
 
-## Design Decision
+- `include/`: filters, ring buffer, scanner, characterization, and log processing.
+- `src/main.cpp`: experiment configuration and demonstrations.
+- `tests/`: four standalone C++ test programs.
+- `Data/`: saved recordings, filtered outputs, decision log, and plots.
+- `plot_compare.py`: reusable plotting functions and configured comparisons.
 
-| Decision | Rationale |
-|---|---|
-| Manual heap allocation over `std::vector` | Demonstrates explicit memory management and ownership semantics |
-| Rule of Five | Ensures correct behavior when scanner objects are copied or moved |
-| `std::optional` on `pop_from_ring` | Avoids undefined behavior on empty buffer without exceptions |
-| Windowed majority vote | More robust to sensor noise than single-reading threshold |
-| Threshold configurable via member variable | Easy to extend with runtime configuration |
+Filter objects retain state; use a fresh object or call `reset()` between independent recordings. Filters run independently on the raw input in these comparisons.
 
+## Limitations and next steps
 
----
+- Add explicit tests for brake release, threshold equality, scanner capacity constraints, and input failures.
+- Define invalid-reading and stale-data behavior before live operation. The analyzer's historical `>= 798` rule is an observed outlier convention; Arduino pulse timeouts in the reviewed capture code yield zero. The filter pipeline currently does not exclude either automatically.
+- Improve file-error handling: readers assume well-formed numeric rows, and currently open the output before confirming the input opened successfully. Use distinct input and output paths.
+- Add reproducible generation of every comparison configuration and automatic header dependencies to the Makefile. Until then, use `make clean && make` after header-only edits.
+- Connect live serial input, record decisions, and demonstrate behavior with a stable sensor mount.
 
-## Future Work
-
-- Configurable window size and threshold at runtime
-- ROS2 node wrapper for integration with real sensor hardware
-- Multi-sensor fusion across multiple `UltrasonicScanner` instances
-- Unit test suite with edge case coverage
-
----
+The manual ring-buffer ownership implementation is a learning exercise; copy/move and invalid-capacity edge cases need further verification. Push is O(1); retrieving k recent items is O(k). The desktop benchmark measures software execution, not physical sensing-to-action latency.
 
 ## Author
-Youssouf - [syf00ysf](https://github.com/syf00ysf)
+
+Youssouf — [syf00ysf](https://github.com/syf00ysf)
