@@ -9,3 +9,9 @@ __pycache__/
 /test_exponential_moving_average
 /test_exponential_moving_average.cpp
 /test_median_filter
+/test_scanner
+
+#Generated object and dependency files
+*.o
+*.d
+

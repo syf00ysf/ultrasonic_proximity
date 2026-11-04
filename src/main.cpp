@@ -94,6 +94,8 @@ int main(){
 
     //live connection
 
+    MedianFilter<float> live_median_filter{5};
+
     Measurement reading{};
     int connection = open_serial("/dev/cu.usbmodem1301");
     int i = 0;
@@ -102,9 +104,19 @@ int main(){
             return 1;
         } 
 
-    while (i < 10){
+    while (i < 15){
         if (read_measurement(connection, reading)){
-            std::cout << "Timestamp in ms: " << reading.timestamp_ms << "---" << "Distance in cm:" << reading.distance_cm << std::endl;
+            if(reading.distance_cm > 0) {
+                float filtered = live_median_filter.update(reading.distance_cm);
+                std::cout   << reading.timestamp_ms
+                            << " ms | raw: " << reading.distance_cm
+                            << " cm | median: " << filtered << " cm\n";
+            }else{
+                std::cout << reading.timestamp_ms
+                            << "ms | invalid reading: "
+                            << reading.distance_cm << "\n";
+            }
+             
         }
         else {
             std::cerr << "Could not get a measurement";
