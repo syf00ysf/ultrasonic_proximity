@@ -103,9 +103,11 @@ int main(){
             printf("no connection ");
             return 1;
         } 
-
+    
+    SerialReaderState reader_state{}; 
     while (i < 15){
-        if (read_measurement(connection, reading)){
+        ReadStatus status = read_measurement(connection, reading, reader_state);
+        if (status == ReadStatus::MeasurementReady){
             if(reading.distance_cm > 0) {
                 float filtered = live_median_filter.update(reading.distance_cm);
                 std::cout   << reading.timestamp_ms
@@ -117,6 +119,9 @@ int main(){
                             << reading.distance_cm << "\n";
             }
              
+        }
+        else if(status == ReadStatus::Timeout){
+            continue;
         }
         else {
             std::cerr << "Could not get a measurement";

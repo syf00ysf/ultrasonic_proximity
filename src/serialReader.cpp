@@ -6,10 +6,12 @@
 #include <string>
 #include <cerrno>
 #include <sstream>
+#include <chrono>
+#include <poll.h>
 
 
 int open_serial(const char* port){
-    int connection = open(port, O_RDWR | O_NOCTTY);
+    int connection = open(port, O_RDWR | O_NOCTTY | O_NONBLOCK);
 
     termios settings{};
 
@@ -45,22 +47,68 @@ int open_serial(const char* port){
 
 }
 
-bool read_measurement(int connection, Measurement& result){
+ReadStatus read_measurement(int connection, Measurement& result, SerialReaderState& state){
     char byte;
-    std::string line;
+    std::string& line = state.pending_line;
+
+    const auto deadline = std::chrono::steady_clock::now()
+                                + std::chrono::milliseconds(250);
+    //creating poll
+    pollfd port{};
+    port.fd = connection;
+    port.events = POLLIN;
 
     while(true){
+        const auto now = std::chrono::steady_clock::now();
+        if(now >= deadline){
+            return ReadStatus::Timeout;
+        }
+        //Time reamining
+        const auto remaining = std::chrono::ceil<std::chrono::milliseconds>( deadline - now );
+
+        int poll_result = poll(
+            &port, 
+            1,
+            static_cast<int>(remaining.count())
+        );
+
+        //Poll returns 0 or negative
+
+        if(poll_result == 0){
+            return ReadStatus::Timeout;
+        }
+        if(poll_result == -1){
+            if(errno == EINTR){
+                continue;
+            }
+            perror("Could not poll serial port");
+            return ReadStatus::Error;
+        }
+        //Poll returns positive
+        if(port.revents & (POLLERR | POLLNVAL)){
+            return ReadStatus::Error;
+        }
+        if(!(port.revents & POLLIN)){
+            if(port.revents & POLLHUP){
+                return ReadStatus::Disconnected;
+            }
+            continue;
+        }
+
         ssize_t count = read(connection, &byte, 1);
 
         if(count == -1){
             if(errno ==  EINTR){
                 continue;
             }
+            if(errno == EAGAIN || errno == EWOULDBLOCK){
+                continue;
+            }
             perror("Could not read serial port");
-            return false;
+            return ReadStatus::Error;
         }
         if (count == 0){
-            return false;
+            return ReadStatus::Disconnected;
         }
         if (byte == '\n'){
             break;
@@ -71,16 +119,17 @@ bool read_measurement(int connection, Measurement& result){
     }
 
     std::istringstream parser(line);
+    line.clear();
     Measurement parsed {};
 
     if(!(parser >> parsed.timestamp_ms >> parsed.distance_cm)) {
-        return false;
+        return ReadStatus::InvalidLine;
     }
 
     parser >> std::ws;
 
-    if(!parser.eof()) return false;
-    
+    if(!parser.eof()) return ReadStatus::InvalidLine;
+
     result = parsed;
-    return true;
+    return ReadStatus::MeasurementReady;
 }
