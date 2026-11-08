@@ -8,8 +8,10 @@
 #include "logFilter.h"
 #include "logReader.h"
 #include "serialReader.h"
+#include "measurementValidation.h"
 #include <iostream>
 #include <unistd.h>
+#include <cmath>
 
 
 int main(){
@@ -123,8 +125,8 @@ int main(){
 
         ReadStatus status = read_measurement(connection, reading, reader_state);
         if (status == ReadStatus::MeasurementReady){
-        
-            if(reading.distance_cm > 0) {
+            bool valid = is_valid_distance(reading.distance_cm);
+            if(valid) {
                 if(is_stale_state == true){
                     if(has_valid_reading == false){
                         std::cout << "First valid reading received... \n";
