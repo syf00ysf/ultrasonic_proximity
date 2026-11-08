@@ -97,7 +97,7 @@ int main(){
     MedianFilter<float> live_median_filter{5};
 
     Measurement reading{};
-    int connection = open_serial("/dev/cu.usbmodem1301");
+    int connection = open_serial("/dev/cu.usbmodem21401");
     int i = 0;
     if(connection == -1){
             printf("no connection ");
@@ -105,10 +105,39 @@ int main(){
         } 
     
     SerialReaderState reader_state{}; 
+    auto last_valid_received = std::chrono::steady_clock::now();
+    bool has_valid_reading = false;
+    const auto stale_after = std::chrono::seconds(3);
+    bool is_stale_state = false;
+
     while (i < 15){
+        auto elapsed = std::chrono::steady_clock::now() - last_valid_received;
+        if(elapsed >= stale_after && is_stale_state == false){
+                is_stale_state = true;
+                if(has_valid_reading == false){
+                    std::cout << "still waiting for the first valid reading... \n";
+                }else{
+                    std::cout << "Too long without a valid reading... \n";
+                }
+            }
+
         ReadStatus status = read_measurement(connection, reading, reader_state);
         if (status == ReadStatus::MeasurementReady){
+        
             if(reading.distance_cm > 0) {
+                if(is_stale_state == true){
+                    if(has_valid_reading == false){
+                        std::cout << "First valid reading received... \n";
+                    }
+                    else{
+                        live_median_filter.reset();
+                        std::cout << "Valid readings resumed... \n";
+                    }
+                    is_stale_state = false;
+                }
+                
+                last_valid_received = std::chrono::steady_clock::now();
+                has_valid_reading = true;
                 float filtered = live_median_filter.update(reading.distance_cm);
                 std::cout   << reading.timestamp_ms
                             << " ms | raw: " << reading.distance_cm
@@ -118,13 +147,20 @@ int main(){
                             << "ms | invalid reading: "
                             << reading.distance_cm << "\n";
             }
-             
+       
         }
         else if(status == ReadStatus::Timeout){
             continue;
         }
         else {
-            std::cerr << "Could not get a measurement";
+            if(status == ReadStatus::InvalidLine){
+                std::cerr << "Serial message could not be parsed\n";
+                continue;
+            }else if(status == ReadStatus::Disconnected){
+                std::cerr << "Serial connection closed\n";
+            }else if(status == ReadStatus::Error){
+                std::cerr << "Serial port read or poll error\n";
+            }
             break;
         }
         i++;

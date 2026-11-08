@@ -8,6 +8,8 @@
 #include <sstream>
 #include <chrono>
 #include <poll.h>
+#include <iostream>
+#include <iomanip>
 
 
 int open_serial(const char* port){
@@ -43,6 +45,16 @@ int open_serial(const char* port){
         close(connection);
         return -1;
     }
+
+    // Allow startup to settle, then discard queued input.
+sleep(1);
+
+if (tcflush(connection, TCIFLUSH) == -1) {
+    perror("Could not flush serial input");
+    close(connection);
+    return -1;
+}
+
     return connection;
 
 }
@@ -110,6 +122,7 @@ ReadStatus read_measurement(int connection, Measurement& result, SerialReaderSta
         if (count == 0){
             return ReadStatus::Disconnected;
         }
+
         if (byte == '\n'){
             break;
         }
@@ -123,12 +136,18 @@ ReadStatus read_measurement(int connection, Measurement& result, SerialReaderSta
     Measurement parsed {};
 
     if(!(parser >> parsed.timestamp_ms >> parsed.distance_cm)) {
+        std::cerr << "Invalid fields in: "
+                  << std::quoted(parser.str()) <<'\n';
         return ReadStatus::InvalidLine;
     }
 
     parser >> std::ws;
 
-    if(!parser.eof()) return ReadStatus::InvalidLine;
+    if(!parser.eof()){ 
+        std::cerr << "Unexpected extra text in: "
+                  << std::quoted(parser.str()) << '\n';
+        return ReadStatus::InvalidLine;
+    }
 
     result = parsed;
     return ReadStatus::MeasurementReady;
