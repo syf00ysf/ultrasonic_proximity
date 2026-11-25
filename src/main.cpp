@@ -12,6 +12,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <cmath>
+#include "timestampValidation.h"
 
 
 int main(){
@@ -100,7 +101,7 @@ int main(){
 
     Measurement reading{};
     int connection = open_serial("/dev/cu.usbmodem21401");
-    int i = 0;
+    int valid_count = 0;
     if(connection == -1){
             printf("no connection ");
             return 1;
@@ -111,8 +112,11 @@ int main(){
     bool has_valid_reading = false;
     const auto stale_after = std::chrono::seconds(3);
     bool is_stale_state = false;
+    bool has_previous_timestamp = false;
+    unsigned long previous_timestamp = 0;
 
-    while (i < 15){
+
+    while (valid_count < 15){
         auto elapsed = std::chrono::steady_clock::now() - last_valid_received;
         if(elapsed >= stale_after && is_stale_state == false){
                 is_stale_state = true;
@@ -125,6 +129,24 @@ int main(){
 
         ReadStatus status = read_measurement(connection, reading, reader_state);
         if (status == ReadStatus::MeasurementReady){
+
+            TimestampStatus tm_status = valid_timestamp(reading.timestamp_ms, has_previous_timestamp, previous_timestamp);
+            switch(tm_status) {
+                    case TimestampStatus::FirstReading:
+                        has_previous_timestamp = true;
+                        break;
+                    case TimestampStatus::Duplicate:
+                        std::cout << "Duplicate Timestamp ignored! \n";
+                        continue;
+                    case TimestampStatus::Discontinuity:
+                        live_median_filter.reset();
+                        std::cout << "Timestamp discontinuity, filter reset. \n";
+                        break;
+                    case TimestampStatus::Normal:
+                        break;
+                }
+            previous_timestamp = reading.timestamp_ms;
+
             bool valid = is_valid_distance(reading.distance_cm);
             if(valid) {
                 if(is_stale_state == true){
@@ -144,6 +166,8 @@ int main(){
                 std::cout   << reading.timestamp_ms
                             << " ms | raw: " << reading.distance_cm
                             << " cm | median: " << filtered << " cm\n";
+                valid_count++;
+
             }else{
                 std::cout << reading.timestamp_ms
                             << "ms | invalid reading: "
@@ -165,7 +189,7 @@ int main(){
             }
             break;
         }
-        i++;
+        
     }
     close(connection);
 
