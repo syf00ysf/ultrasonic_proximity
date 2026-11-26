@@ -59,4 +59,45 @@ int main(){
     scanner2.push_reading(20.0f);
     assert(scanner2.get_brake_state() == true);
 
+//reset test
+
+    UltrasonicScanner scanner3{5, 25.0f};
+    scanner3.push_reading(20.0f);
+    scanner3.push_reading(15.0f);
+    scanner3.push_reading(22.0f);
+    assert(scanner3.get_brake_state() == true);
+    scanner3.reset();
+    scanner3.push_reading(20.0f);
+    assert(scanner3.get_brake_state() == false);
+
+//Enter failsafe and recovery test 
+
+    scanner3.enter_failsafe();
+    assert(scanner3.get_brake_state() == true);
+    assert(scanner3.is_in_failsafe() == true);
+    scanner3.push_reading(30.0f);
+    assert(scanner3.get_brake_state() == true);
+    scanner3.push_reading(30.0f);
+    assert(scanner3.get_brake_state() == true);
+    scanner3.push_reading(30.0f);
+    assert(scanner3.get_brake_state() == false);
+    assert(scanner3.is_in_failsafe() == false);
+    scanner3.reset();
+    
+    
+
+//Mixed readings
+
+    scanner3.enter_failsafe();
+    scanner3.push_reading(20.0f);
+    scanner3.push_reading(20.0f);
+    scanner3.push_reading(30.0f);
+    assert(scanner3.get_brake_state() == true);
+    assert(scanner3.is_in_failsafe() == true);
+    scanner3.push_reading(30.0f);
+    scanner3.push_reading(30.0f);
+    assert(scanner3.get_brake_state() == false);
+    assert(scanner3.is_in_failsafe() == false);
+
+
 }

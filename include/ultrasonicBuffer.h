@@ -128,6 +128,20 @@ class RingBuffer{
         return recent_readings;
         
     }
+
+    void clear() noexcept {
+        head = 0;
+        tail = 0;
+        count = 0;
+    }
+
+    std::size_t size() const noexcept {
+        return count;
+    }
+
+    bool empty() const noexcept {
+        return count == 0;
+    }
     
 
 };
