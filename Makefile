@@ -3,7 +3,7 @@ CXXFLAGS = -std=c++20 -Wall -O2 -Iinclude -MMD -MP
 SANITIZERS ?= undefined
 TEST_CXXFLAGS = -std=c++20 -g -Wall -Wextra -fsanitize=$(SANITIZERS) -Iinclude
 
-CORE_OBJS = serialReader.o measurementValidation.o timestampValidation.o
+CORE_OBJS = serialReader.o measurementValidation.o timestampValidation.o proximityPipeline.o
 DEPS = main.d $(CORE_OBJS:.o=.d)
 
 scanner: main.o $(CORE_OBJS)
@@ -20,6 +20,9 @@ measurementValidation.o: src/measurementValidation.cpp
 
 timestampValidation.o: src/timestampValidation.cpp
 	$(CXX) $(CXXFLAGS) -c src/timestampValidation.cpp -o timestampValidation.o
+
+proximityPipeline.o: src/proximityPipeline.cpp
+	$(CXX) $(CXXFLAGS) -c src/proximityPipeline.cpp -o proximityPipeline.o
 
 
 .PHONY: test

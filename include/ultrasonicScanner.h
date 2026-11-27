@@ -3,7 +3,7 @@
 
 #include "ultrasonicBuffer.h"
 #include "stdexcept"
- 
+
 class UltrasonicScanner {
     private:
     RingBuffer <float> a_ring;
